@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Biologiya Test Fabrikasi</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --border: #334155;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+    h2, h3 { margin-top: 0; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .badge-online { background: rgba(34, 197, 94, 0.2); color: var(--green); border: 1px solid var(--green); }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .agent-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #2d3748;
+    }
+    .agent-row:last-child { border-bottom: none; }
+    .agent-info { font-size: 13px; }
+    .agent-name { font-weight: 600; display: block; }
+    .agent-task { font-size: 11px; color: #94a3b8; }
+    input, select, textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 14px;
+      margin-top: 6px;
+      box-sizing: border-box;
+    }
+    button.btn-primary {
+      width: 100%;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+    }
+    .nav-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="nav-tabs">
+    <div class="nav-btn active" onclick="switchTab('create')">🎯 Test Yaratish</div>
+    <div class="nav-btn" onclick="switchTab('agents')">🏢 Agentlar Shtabi</div>
+  </div>
+
+  <div id="tab-create">
+    <div class="card">
+      <h3>Yangi topshiriq</h3>
+      <label style="font-size: 12px; color: #94a3b8;">Departamentni tanlang:</label>
+      <select id="deptSelect">
+        <option value="bmba">🎯 Milliy Sertifikat (BMBA Elit)</option>
+        <option value="topic">📚 Mavzulashtirilgan Testlar</option>
+        <option value="blitz">⚡ Blits Savol-Javob</option>
+        <option value="guide">📖 Qo‘llanma / Konspekt</option>
+      </select>
+
+      <div style="margin-top: 12px;">
+        <label style="font-size: 12px; color: #94a3b8;">Mavzu yoki matn:</label>
+        <textarea id="topicInput" rows="4" placeholder="Masalan: Gen muhandisligi: Ligaza, Restriktaza va Transpozonlar..."></textarea>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <label style="font-size: 12px; color: #94a3b8;">Savollar soni:</label>
+        <select id="countSelect">
+          <option value="10">10 ta savol</option>
+          <option value="20">20 ta savol</option>
+          <option value="30">30 ta savol</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" onclick="submitTask()">🚀 Generatsiyani boshlash</button>
+    </div>
+  </div>
+
+  <div id="tab-agents" style="display: none;">
+    <div class="card">
+      <h3>Agentlar Monitoringi (Jonli)</h3>
+      <div class="agent-row">
+        <div class="agent-info">
+          <span class="agent-name">5-Agent: Katta Testolog</span>
+          <span class="agent-task">Kutmoqda...</span>
+        </div>
+        <span class="badge badge-online">ONLINE</span>
+      </div>
+      <div class="agent-row">
+        <div class="agent-info">
+          <span class="agent-name">6-Agent: Bosh Auditor</span>
+          <span class="agent-task">Kutmoqda...</span>
+        </div>
+        <span class="badge badge-online">ONLINE</span>
+      </div>
+      <div class="agent-row">
+        <div class="agent-info">
+          <span class="agent-name">3-Agent: Mavzu Tuzuvchi</span>
+          <span class="agent-task">Kutmoqda...</span>
+        </div>
+        <span class="badge badge-online">ONLINE</span>
+      </div>
+      <div class="agent-row">
+        <div class="agent-info">
+          <span class="agent-name">4-Agent: Metodik Ekspert</span>
+          <span class="agent-task">Kutmoqda...</span>
+        </div>
+        <span class="badge badge-online">ONLINE</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    function switchTab(tab) {
+      document.getElementById('tab-create').style.display = tab === 'create' ? 'block' : 'none';
+      document.getElementById('tab-agents').style.display = tab === 'agents' ? 'block' : 'none';
+      const btns = document.querySelectorAll('.nav-btn');
+      btns[0].classList.toggle('active', tab === 'create');
+      btns[1].classList.toggle('active', tab === 'agents');
+    }
+
+    function submitTask() {
+      const topic = document.getElementById('topicInput').value.trim();
+      if (!topic) {
+        alert("Iltimos, mavzu nomini kiriting!");
+        return;
+      }
+      const data = {
+        dept: document.getElementById('deptSelect').value,
+        topic: topic,
+        count: parseInt(document.getElementById('countSelect').value)
+      };
+      tg.sendData(JSON.stringify(data));
+      tg.close();
+    }
+  </script>
+</body>
+</html>

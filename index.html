@@ -3,313 +3,646 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Biologiya Vektor - Agentlar Shtabi</title>
+    <title>Biologiya Testologiya Fabrikasi</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: #111827;
-            --accent-green: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.2);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --border-color: #1f2937;
-            --danger-color: #ef4444;
+            --bg-color: #0d1117;
+            --card-bg: rgba(22, 27, 34, 0.85);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --primary: #2ea043;
+            --primary-glow: rgba(46, 160, 67, 0.35);
+            --accent: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.3);
+            --danger: #f85149;
+            --warning: #d29922;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            padding: 16px;
-            padding-bottom: 80px;
+            padding: 14px 14px 80px 14px;
+            font-size: 14px;
+            line-height: 1.5;
         }
 
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
+        /* Yuqori Header */
+        .header {
+            text-align: center;
+            padding: 12px 0 16px 0;
         }
-
-        .brand-title {
+        .header h1 {
             font-size: 18px;
             font-weight: 700;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #58a6ff, #2ea043);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-
-        .status-badge {
-            font-size: 11px;
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--accent-green);
-            padding: 4px 8px;
-            border-radius: 12px;
-            border: 1px solid var(--accent-green);
-        }
-
-        .nav-tabs {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            margin-bottom: 20px;
-            background: var(--card-bg);
-            padding: 4px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .nav-tab {
-            background: transparent;
-            border: none;
+        .header p {
+            font-size: 12px;
             color: var(--text-muted);
-            padding: 8px 4px;
-            font-size: 11px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: center;
+            margin-top: 3px;
         }
 
-        .nav-tab.active {
-            background: var(--accent-green);
-            color: #000;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
+        /* Glassmorphism Kartochkalar */
         .card {
             background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
             padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            margin-bottom: 14px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
         }
 
         .card-title {
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 12px;
-            color: #fff;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            color: var(--text-main);
         }
 
+        /* Departament tanlash tugmalari */
+        .dep-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .dep-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 12px 8px;
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .dep-btn.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        /* Formalar va Kiritish maydonlari */
+        .form-group {
+            margin-bottom: 12px;
+        }
         label {
             display: block;
             font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 5px;
+            font-weight: 500;
         }
-
         input, textarea, select {
             width: 100%;
-            background: #0d1321;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            color: var(--text-main);
+            background: rgba(13, 17, 23, 0.7);
+            border: 1px solid var(--card-border);
+            border-radius: 9px;
+            padding: 10px 12px;
+            color: #fff;
             font-size: 13px;
-            margin-bottom: 14px;
             outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--accent);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 70px;
         }
 
-        input:focus, textarea:focus {
-            border-color: var(--accent-green);
-            box-shadow: 0 0 8px var(--accent-glow);
-        }
-
-        .btn {
+        /* Aqlli Tahlil Tugmasi va Blok */
+        .analyze-btn {
             width: 100%;
-            background: var(--accent-green);
-            color: #000;
-            font-weight: 700;
-            border: none;
+            background: rgba(88, 166, 255, 0.15);
+            border: 1px dashed var(--accent);
+            color: var(--accent);
+            padding: 8px 12px;
             border-radius: 8px;
-            padding: 12px;
-            font-size: 13px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
+            margin-top: 4px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .analyze-box {
+            background: rgba(88, 166, 255, 0.08);
+            border-left: 3px solid var(--accent);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #c9d1d9;
+            margin-bottom: 12px;
+            display: none;
+            white-space: pre-wrap;
+        }
+
+        /* Asosiy Ishga Tushirish Tugmasi */
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #2ea043, #238636);
+            border: none;
+            border-radius: 10px;
+            padding: 13px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            transition: all 0.2s;
+        }
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 8 Agent Kartochkalari (Monitoring) */
+        .agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .agent-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 9px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .agent-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.07);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            font-size: 16px;
         }
-
-        .btn:active {
-            transform: scale(0.98);
+        .agent-name {
+            font-size: 13px;
+            font-weight: 500;
         }
-
-        .loading-spinner {
-            display: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #000;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .log-box {
-            background: #060911;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            font-family: monospace;
+        .agent-role {
             font-size: 11px;
-            color: var(--accent-green);
-            min-height: 50px;
-            max-height: 120px;
+            color: var(--text-muted);
+        }
+        .status-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(46, 160, 67, 0.15);
+            color: #3fb950;
+            border: 1px solid rgba(46, 160, 67, 0.3);
+        }
+        .status-badge.working {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--warning);
+            border-color: rgba(210, 153, 34, 0.3);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* Chat Oynasi */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 8px;
+        }
+        .chat-bubble {
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            max-width: 85%;
+        }
+        .chat-user {
+            background: var(--accent);
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .chat-bot {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            white-space: pre-wrap;
+        }
+
+        /* Natija oynasi */
+        .result-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 9px;
+            padding: 12px;
+            font-size: 12px;
+            max-height: 250px;
             overflow-y: auto;
             white-space: pre-wrap;
+            display: none;
+            margin-top: 12px;
+        }
+
+        /* Pastki Menyu (Bottom Navigation) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(13, 17, 23, 0.95);
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            backdrop-filter: blur(12px);
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            color: var(--text-muted);
+            font-size: 10px;
+            cursor: pointer;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+        .nav-item.active {
+            color: var(--accent);
+        }
+        .nav-icon {
+            font-size: 18px;
+        }
+
+        /* Tablarni ko'rsatish/yashirish */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="brand-title">VEKTOR HQ</div>
-        <div class="status-badge" id="tgUser">Ulanmoqda...</div>
-    </header>
-
-    <div class="nav-tabs">
-        <button class="nav-tab active" onclick="switchTab('dep1')">Blits</button>
-        <button class="nav-tab" onclick="switchTab('dep2')">Test</button>
-        <button class="nav-tab" onclick="switchTab('dep3')">Sertifikat</button>
-        <button class="nav-tab" onclick="switchTab('dep4')">Konspekt</button>
+    <!-- Header -->
+    <div class="header">
+        <h1>BIOLOGIYA TEST FABRIKASI</h1>
+        <p>Multi-Agent Neyro-Tizimi • 8 ta Agent Shtabi</p>
     </div>
 
-    <!-- 1-DEPARTAMENT: BLITS -->
-    <div id="dep1" class="tab-content active">
+    <!-- ===================================================================== -->
+    <!-- 1-TAB: ASOSIY BUYURTMA VA GENERATSIYA -->
+    <!-- ===================================================================== -->
+    <div id="tab-order" class="tab-content active">
         <div class="card">
-            <div class="card-title">1-Departament: Blits Savol-Javob</div>
-            <label>Mavzu yoki darslik bobi:</label>
-            <input type="text" id="blitsTopic" placeholder="Masalan: 10-sinf, Qon guruhlari">
-            <button class="btn" onclick="requestGeneration('blits')">
-                <span class="loading-spinner" id="spin_blits"></span>
-                <span>Generatsiya va Chatga yuborish</span>
-            </button>
+            <div class="card-title">🎯 Departamentni tanlang</div>
+            <div class="dep-grid">
+                <button class="dep-btn active" onclick="selectDepartment('blits')">⚡️ 1. Blits Savol</button>
+                <button class="dep-btn" onclick="selectDepartment('topic')">📝 2. Mavzuli Test</button>
+                <button class="dep-btn" onclick="selectDepartment('sertifikat')">🏆 3. Milliy Sertifikat</button>
+                <button class="dep-btn" onclick="selectDepartment('guide')">📚 4. Konspekt</button>
+            </div>
+
+            <!-- Mavzu Kiritish (Milliy sertifikatda yashiriladi) -->
+            <div class="form-group" id="group-topic">
+                <label for="input-topic">Mavzu yoki matn parchasi:</label>
+                <textarea id="input-topic" placeholder="Masalan: 10-sinf. Odamda qon aylanish sistemasi va yurak tuzilishi..."></textarea>
+                <button class="analyze-btn" id="btn-analyze" onclick="analyzeTopicCapacity()">🧠 Mavzuning ilmiy sig'imini tahlil qilish</button>
+                <div class="analyze-box" id="box-analysis"></div>
+            </div>
+
+            <!-- Savollar Soni (Erkin kiritish) -->
+            <div class="form-group" id="group-count">
+                <label for="input-count">Savollar soni (qo'lda erkin kiriting):</label>
+                <input type="number" id="input-count" value="10" min="1" max="100">
+            </div>
+
+            <!-- Milliy Sertifikat Ma'lumot Bloki -->
+            <div class="form-group" id="group-sertifikat-info" style="display: none;">
+                <label for="input-variant-name">Variant nomi:</label>
+                <input type="text" id="input-variant-name" value="BMBA Milliy Sertifikat 2026 (Yangi Sinov)">
+                <p style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+                    ℹ️ Milliy sertifikatda mavzu tanlanmaydi — u butun biologiya kursini (Botanika, Zoologiya, Anatomiya, Sitologiya, Genetika) to'liq qamrab oluvchi 43 talik rasmiy blok ko'rinishida shakllanadi.
+                </p>
+            </div>
+
+            <!-- Ishga Tushirish Tugmasi -->
+            <button class="action-btn" id="btn-submit" onclick="startGeneration()">Generatsiyani boshlash</button>
+
+            <!-- Natija va yuklanish indikatori -->
+            <div class="result-box" id="box-result"></div>
         </div>
     </div>
 
-    <!-- 2-DEPARTAMENT: MAVZULI TESTLAR -->
-    <div id="dep2" class="tab-content">
+    <!-- ===================================================================== -->
+    <!-- 2-TAB: 8 AGENT MONITORINGI (Shtab) -->
+    <!-- ===================================================================== -->
+    <div id="tab-monitoring" class="tab-content">
         <div class="card">
-            <div class="card-title">2-Departament: Chuqurlashtirilgan Testlar</div>
-            <label>Mavzu nomi:</label>
-            <input type="text" id="testTopic" placeholder="Masalan: Oqsil biosintezi va genetika">
-            <label>Savollar soni:</label>
-            <select id="testCount">
-                <option value="10">10 ta chuqur test</option>
-                <option value="20">20 ta chuqur test</option>
-                <option value="30">30 ta chuqur test</option>
-            </select>
-            <button class="btn" onclick="requestGeneration('test')">
-                <span class="loading-spinner" id="spin_test"></span>
-                <span>Test paketini yaratish</span>
-            </button>
+            <div class="card-title">👥 8 ta Agent Shtabi va Jonli Holati</div>
+            <div class="agent-list">
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">⚡️</div>
+                        <div>
+                            <div class="agent-name">1-Agent: Blits-Tuzuvchi</div>
+                            <div class="agent-role">Faktik savol-javoblar me'mori</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent1">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">🔍</div>
+                        <div>
+                            <div class="agent-name">2-Agent: Blits-Nazoratchi</div>
+                            <div class="agent-role">Ambiguitet va xatolar hakami</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent2">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">🧬</div>
+                        <div>
+                            <div class="agent-name">3-Agent: Mavzu-Testolog</div>
+                            <div class="agent-role">Polimorf va vizual testlar</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent3">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">🎯</div>
+                        <div>
+                            <div class="agent-name">4-Agent: Metodik Ekspert</div>
+                            <div class="agent-role">Distraktorlar shafqatsizligi nazorati</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent4">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">🏆</div>
+                        <div>
+                            <div class="agent-name">5-Agent: Katta Testolog</div>
+                            <div class="agent-role">BMBA 43 talik Elit arxitektori</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent5">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">⚖️</div>
+                        <div>
+                            <div class="agent-name">6-Agent: Bosh Auditor</div>
+                            <div class="agent-role">BMBA rubrikasi va M/A baholari</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent6">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">📖</div>
+                        <div>
+                            <div class="agent-name">7-Agent: Qo'llanma Arxitektori</div>
+                            <div class="agent-role">7 bosqichli konspekt dvigateli</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent7">🟢 Online</span>
+                </div>
+
+                <div class="agent-item">
+                    <div class="agent-info">
+                        <div class="agent-avatar">✍️</div>
+                        <div>
+                            <div class="agent-name">8-Agent: Akademik Redaktor</div>
+                            <div class="agent-role">Stilistika va tuzoqlar tahriri</div>
+                        </div>
+                    </div>
+                    <span class="status-badge" id="status-agent8">🟢 Online</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- 3-DEPARTAMENT: MILLIY SERTIFIKAT -->
-    <div id="dep3" class="tab-content">
+    <!-- ===================================================================== -->
+    <!-- 3-TAB: AGENTLAR BILAN CHAT MARKAZI -->
+    <!-- ===================================================================== -->
+    <div id="tab-chat" class="tab-content">
         <div class="card">
-            <div class="card-title">3-Departament: 43 talik BMBA Standarti</div>
-            <label>Variant nomi / Identifikatori:</label>
-            <input type="text" id="sertifikatName" placeholder="Masalan: Oktyabr 2026 - 1-Variant">
-            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
-                43 ta topshiriq (Y1, Y2, O1, O2) generatsiya qilinadi hamda o'quvchi va o'qituvchi (M/A mezonlari) fayllari botga uzatiladi.
-            </p>
-            <button class="btn" onclick="requestGeneration('sertifikat')">
-                <span class="loading-spinner" id="spin_sertifikat"></span>
-                <span>To'liq Variantni Generatsiya Qilish</span>
-            </button>
+            <div class="card-title">💬 Agent bilan Muloqot</div>
+            <div class="form-group">
+                <label for="select-chat-agent">Agentni tanlang:</label>
+                <select id="select-chat-agent">
+                    <option value="agent1">1-Agent (Blits-Tuzuvchi)</option>
+                    <option value="agent2">2-Agent (Blits-Nazoratchi)</option>
+                    <option value="agent3">3-Agent (Mavzu-Testolog)</option>
+                    <option value="agent4">4-Agent (Metodik Ekspert)</option>
+                    <option value="agent5">5-Agent (BMBA Katta Testolog)</option>
+                    <option value="agent6">6-Agent (BMBA Bosh Auditor)</option>
+                    <option value="agent7">7-Agent (Qo'llanma Arxitektori)</option>
+                    <option value="agent8">8-Agent (Akademik Redaktor)</option>
+                </select>
+            </div>
+
+            <div class="chat-container" id="chat-messages">
+                <div class="chat-bubble chat-bot">Salom! Men bilan o'z mutaxassisligim bo'yicha maslahatlashishingiz yoki testlaringizni muhokama qilishingiz mumkin. Savolingizni yozing:</div>
+            </div>
+
+            <div class="form-group">
+                <input type="text" id="chat-input" placeholder="Xabaringizni yozing...">
+            </div>
+            <button class="action-btn" onclick="sendAgentMessage()">Yuborish</button>
         </div>
     </div>
 
-    <!-- 4-DEPARTAMENT: KONSPEKT -->
-    <div id="dep4" class="tab-content">
-        <div class="card">
-            <div class="card-title">4-Departament: 7 Bosqichli Konspekt</div>
-            <label>Akademik mavzu:</label>
-            <input type="text" id="guideTopic" placeholder="Masalan: Fotosintezning yorug'lik va qorong'ilik fazalari">
-            <button class="btn" onclick="requestGeneration('guide')">
-                <span class="loading-spinner" id="spin_guide"></span>
-                <span>Akademik Konspekt Tuzish</span>
-            </button>
+    <!-- Pastki Navigatsiya -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('order', this)">
+            <div class="nav-icon">🎯</div>
+            <div>Buyurtma</div>
         </div>
-    </div>
-
-    <!-- JARAYON MONITORI -->
-    <div class="card">
-        <div class="card-title">Jarayon Holati</div>
-        <div class="log-box" id="logBox">> Tizim tayyor holatda.</div>
+        <div class="nav-item" onclick="switchTab('monitoring', this)">
+            <div class="nav-icon">👥</div>
+            <div>8 Agent</div>
+        </div>
+        <div class="nav-item" onclick="switchTab('chat', this)">
+            <div class="nav-icon">💬</div>
+            <div>Chat</div>
+        </div>
     </div>
 
     <script>
+        // Telegram WebApp initsializatsiyasi
         const tg = window.Telegram?.WebApp;
         if (tg) {
             tg.expand();
-            const user = tg.initDataUnsafe?.user;
-            document.getElementById('tgUser').innerText = user ? user.first_name : 'Foydalanuvchi';
+            tg.ready();
         }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
+        // Foydalanuvchi Telegram ID si
+        const telegramId = tg?.initDataUnsafe?.user?.id || null;
+
+        let currentDepartment = 'blits';
+
+        // Tablarni almashtirish
+        function switchTab(tabName, el) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            el.classList.add('active');
+        }
+
+        // Departament tanlash
+        function selectDepartment(dep) {
+            currentDepartment = dep;
+            document.querySelectorAll('.dep-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+
+            const groupTopic = document.getElementById('group-topic');
+            const groupCount = document.getElementById('group-count');
+            const groupSertifikat = document.getElementById('group-sertifikat-info');
+
+            if (dep === 'sertifikat') {
+                groupTopic.style.display = 'none';
+                groupCount.style.display = 'none';
+                groupSertifikat.style.display = 'block';
+            } else if (dep === 'guide') {
+                groupTopic.style.display = 'block';
+                groupCount.style.display = 'none';
+                groupSertifikat.style.display = 'none';
+            } else {
+                groupTopic.style.display = 'block';
+                groupCount.style.display = 'block';
+                groupSertifikat.style.display = 'none';
+            }
         }
 
-        function log(msg) {
-            const box = document.getElementById('logBox');
-            box.innerText = `> ${msg}\n` + box.innerText;
+        // 🧠 Mavzu sig'imini tahlil qilish
+        async function analyzeTopicCapacity() {
+            const topic = document.getElementById('input-topic').value;
+            const box = document.getElementById('box-analysis');
+            const btn = document.getElementById('btn-analyze');
+
+            if (!topic.trim()) {
+                alert("Iltimos, avval mavzu yoki matn kiriting!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "⏳ Mavzu tahlil qilinmoqda...";
+            box.style.display = 'block';
+            box.innerText = "Neyro-agent matnning ilmiy chuqurligi va faktlar sig'imini o'rganmoqda...";
+
+            try {
+                const res = await fetch('/api/analyze-topic', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic: topic })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    box.innerText = data.analysis;
+                    // Agar tavsiya qilingan son bo'lsa, uni inputga avtomatik qo'yish
+                    const match = data.analysis.match(/TAVSIYA_SONI:\s*(\d+)/);
+                    if (match && match[1]) {
+                        document.getElementById('input-count').value = match[1];
+                    }
+                } else {
+                    box.innerText = "Tahlil qilishda xatolik yuz berdi.";
+                }
+            } catch (err) {
+                box.innerText = "Server bilan aloqa xatosi: " + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "🧠 Mavzuning ilmiy sig'imini tahlil qilish";
+            }
         }
 
-        async function requestGeneration(type) {
-            const userId = tg?.initDataUnsafe?.user?.id || 12345678; // Telegram User ID
-            const spinner = document.getElementById(`spin_${type}`);
-            spinner.style.display = 'inline-block';
-            log(`${type.toUpperCase()} generatsiyasi boshlandi. Agentlar ishga tushmoqda...`);
+        // Generatsiyani boshlash
+        async function startGeneration() {
+            const btn = document.getElementById('btn-submit');
+            const resultBox = document.getElementById('box-result');
+            const topic = document.getElementById('input-topic').value;
+            const count = document.getElementById('input-count').value;
+            const variantName = document.getElementById('input-variant-name').value;
 
-            let payload = { telegramId: userId };
+            btn.disabled = true;
+            btn.innerText = "⏳ 8 ta Agent zanjiri ishlamoqda...";
+            resultBox.style.display = 'block';
+            resultBox.innerText = "Topshiriq agentlar shtabiga uzatildi. Tuzuvchi va auditor agentlar tekshiruvidan o'tmoqda...";
+
             let endpoint = '';
+            let payload = { telegramId: telegramId };
 
-            if (type === 'blits') {
-                payload.topic = document.getElementById('blitsTopic').value;
+            if (currentDepartment === 'blits') {
                 endpoint = '/api/generate-blits';
-            } else if (type === 'test') {
-                payload.topic = document.getElementById('testTopic').value;
-                payload.count = document.getElementById('testCount').value;
+                payload.topic = topic;
+                payload.count = count;
+            } else if (currentDepartment === 'topic') {
                 endpoint = '/api/generate-topic-test';
-            } else if (type === 'sertifikat') {
-                payload.variantName = document.getElementById('sertifikatName').value;
+                payload.topic = topic;
+                payload.count = count;
+            } else if (currentDepartment === 'sertifikat') {
                 endpoint = '/api/generate-sertifikat';
-            } else if (type === 'guide') {
-                payload.topic = document.getElementById('guideTopic').value;
+                payload.variantName = variantName;
+            } else if (currentDepartment === 'guide') {
                 endpoint = '/api/generate-guide';
+                payload.topic = topic;
             }
 
             try {
@@ -319,16 +652,60 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
+
                 if (data.success) {
-                    log(`✅ Muvaffaqiyatli yakunlandi! Hujjat bot chatiga yuborildi.`);
+                    resultBox.innerText = "✅ Muvaffaqiyatli yakunlandi!\n\nMateriallar tayyorlandi va Telegram botingizga Word/PDF hujjat ko'rinishida yuborildi.\n\nBatafsil matn:\n" + (data.result || data.exam || "Hujjatlar chatga yuborildi.");
                 } else {
-                    log(`❌ Xatolik yuz berdi: ${data.error || 'Noma\'lum xatolik'}`);
+                    resultBox.innerText = "Xatolik yuz berdi: " + (data.error || "Noma'lum xato");
                 }
             } catch (err) {
-                log(`❌ Aloqa xatosi: Server bilan bog'lanib bo'lmadi.`);
+                resultBox.innerText = "Serverga ulanishda xatolik: " + err.message;
             } finally {
-                spinner.style.display = 'none';
+                btn.disabled = false;
+                btn.innerText = "Generatsiyani boshlash";
             }
+        }
+
+        // Agent bilan chat qilish
+        async function sendAgentMessage() {
+            const input = document.getElementById('chat-input');
+            const agentKey = document.getElementById('select-chat-agent').value;
+            const container = document.getElementById('chat-messages');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            // Foydalanuvchi xabari
+            const userBubble = document.createElement('div');
+            userBubble.className = 'chat-bubble chat-user';
+            userBubble.innerText = text;
+            container.appendChild(userBubble);
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            // Agent javobini kutish
+            const loadingBubble = document.createElement('div');
+            loadingBubble.className = 'chat-bubble chat-bot';
+            loadingBubble.innerText = "O'ylamoqda...";
+            container.appendChild(loadingBubble);
+            container.scrollTop = container.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat-agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agentKey: agentKey, message: text })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    loadingBubble.innerText = `[${data.agent}]:\n\n${data.reply}`;
+                } else {
+                    loadingBubble.innerText = "Kechirasiz, javob olishda xatolik yuz berdi.";
+                }
+            } catch (err) {
+                loadingBubble.innerText = "Xatolik: " + err.message;
+            }
+            container.scrollTop = container.scrollHeight;
         }
     </script>
 </body>

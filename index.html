@@ -668,44 +668,52 @@
 
         // Agent bilan chat qilish
         async function sendAgentMessage() {
-            const input = document.getElementById('chat-input');
-            const agentKey = document.getElementById('select-chat-agent').value;
-            const container = document.getElementById('chat-messages');
-            const text = input.value.trim();
+    const input = document.getElementById('chat-input');
+    const agentKey = document.getElementById('select-chat-agent').value;
+    const container = document.getElementById('chat-messages');
+    const text = input.value.trim();
 
-            if (!text) return;
+    if (!text) return;
 
-            // Foydalanuvchi xabari
-            const userBubble = document.createElement('div');
-            userBubble.className = 'chat-bubble chat-user';
-            userBubble.innerText = text;
-            container.appendChild(userBubble);
-            input.value = '';
-            container.scrollTop = container.scrollHeight;
+    const userBubble = document.createElement('div');
+    userBubble.className = 'chat-bubble chat-user';
+    userBubble.innerText = text;
+    container.appendChild(userBubble);
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
 
-            // Agent javobini kutish
-            const loadingBubble = document.createElement('div');
-            loadingBubble.className = 'chat-bubble chat-bot';
-            loadingBubble.innerText = "O'ylamoqda...";
-            container.appendChild(loadingBubble);
-            container.scrollTop = container.scrollHeight;
+    const loadingBubble = document.createElement('div');
+    loadingBubble.className = 'chat-bubble chat-bot';
+    loadingBubble.innerText = "O'ylamoqda...";
+    container.appendChild(loadingBubble);
+    container.scrollTop = container.scrollHeight;
 
-            try {
-                const res = await fetch('/api/chat-agent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ agentKey: agentKey, message: text })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    loadingBubble.innerText = `[${data.agent}]:\n\n${data.reply}`;
-                } else {
-                    loadingBubble.innerText = "Kechirasiz, javob olishda xatolik yuz berdi.";
-                }
-            } catch (err) {
-                loadingBubble.innerText = "Xatolik: " + err.message;
-            }
-            container.scrollTop = container.scrollHeight;
+    try {
+        const res = await fetch('/api/chat-agent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agentKey: agentKey, message: text })
+        });
+        
+        let data;
+        const rawText = await res.text();
+        try {
+            data = JSON.parse(rawText);
+        } catch(parseErr) {
+            loadingBubble.innerText = "Server xatoligi: " + rawText;
+            return;
+        }
+
+        if (data.success) {
+            loadingBubble.innerText = `[${data.agent}]:\n\n${data.reply}`;
+        } else {
+            loadingBubble.innerText = "Xatolik: " + (data.error || "Javob olib bo'lmadi");
+        }
+    } catch (err) {
+        loadingBubble.innerText = "Tarmoq xatosi: " + err.message;
+    }
+    container.scrollTop = container.scrollHeight;
+}
         }
     </script>
 </body>

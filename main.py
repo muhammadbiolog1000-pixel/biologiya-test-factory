@@ -1,106 +1,124 @@
+"""
+BIOLOGIYA VEKTOR - ASOSIY SERVER VA BOT INTEGRATSIYASI (main.py)
+"""
 import os
 import asyncio
-import json
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
-import uvicorn
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from telebot.async_telebot import AsyncTeleBot
+from google import genai
+from agents import AGENT_PROMPTS
+from generator import create_document
 
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, FSInputFile
+app = Flask(__name__, static_folder='.')
+CORS(app)
 
-from agents import generate_bmba_tests, generate_blitz, generate_guide
-from generator import build_student_docx, build_teacher_docx, build_pdf_document
+# Konfiguratsiya (Muhit o'zgaruvchilari)
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "SIZNING_GEMINI_KEY")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "SIZNING_BOT_TOKEN")
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
-WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
+ai_client = genai.Client(api_key=GEMINI_KEY)
+bot = AsyncTeleBot(BOT_TOKEN)
 
-bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
-dp = Dispatcher()
-app = FastAPI()
+# Cron-job uchun uyg'oq saqlovchi yengil ping
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "pong", 200
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_webapp():
-    with open("index.html", "r", encoding="utf-8") as f:
-        return f.read()
+# Mini App frontendini ochish
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}
-
-@dp.message(CommandStart())
-async def cmd_start(message: types.Message):
-    target_url = WEBAPP_URL if WEBAPP_URL else "https://biologiya-test-factory-2.onrender.com"
-    kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🚀 Boshqaruv Markazi (Mini App)", web_app=WebAppInfo(url=target_url))]
-    ])
-    await message.answer(
-        "👋 Xush kelibsiz! Biologiya Test Fabrikasi va Agentlar Shtabini ochish uchun quyidagi tugmani bosing:",
-        reply_markup=kb
+# Gemini neyrotarmog'ini chaqirish funksiyasi
+def ask_gemini(system_prompt: str, user_text: str) -> str:
+    response = ai_client.models.generate_content(
+        model='gemini-2.5-pro',
+        contents=f"{system_prompt}\n\nTopshiriq:\n{user_text}"
     )
+    return response.text
 
-@dp.message(F.web_app_data)
-async def handle_webapp_data(message: types.Message):
-    try:
-        data = json.loads(message.web_app_data.data)
-    except Exception:
-        await message.answer("Xatolik: Ma'lumot formati noto'g'ri!")
-        return
+# 1-Departament: Blits
+@app.route('/api/generate-blits', methods=['POST'])
+async def generate_blits():
+    data = request.json or {}
+    topic = data.get('topic', 'Biologiya')
+    telegram_id = data.get('telegramId')
 
-    dept = data.get("dept")
-    topic = data.get("topic")
-    count = data.get("count", 10)
+    # 1 va 2-agentlar zanjiri
+    draft = ask_gemini(AGENT_PROMPTS["agent1_blits_tuzuvchi"], topic)
+    audited = ask_gemini(AGENT_PROMPTS["agent2_blits_nazoratchi"], draft)
 
-    status_msg = await message.answer(
-        f"⚙️ **Buyurtma qabul qilindi!**\n"
-        f"Bo'lim: `{dept}`\n"
-        f"Mavzu: *{topic}*\n"
-        f"Soni: {count} ta\n\n"
-        f"⏳ *Agentlar ishga tushmoqda, iltimos kuting...*"
-    )
+    if telegram_id:
+        doc_path = create_document(f"Blits: {topic}", audited, f"Blits_{telegram_id}.docx")
+        with open(doc_path, 'rb') as f:
+            await bot.send_document(telegram_id, f, caption=f"✅ '{topic}' mavzusida blits savol-javoblar tayyor!")
+        os.remove(doc_path)
 
-    if dept == "bmba":
-        async def update_status(agent_num, text):
-            try:
-                await status_msg.edit_text(f"🤖 **{agent_num}-Agent ishlamoqda:**\n_{text}_")
-            except Exception:
-                pass
+    return jsonify({"success": True, "result": audited})
 
-        tests = await generate_bmba_tests(topic, count=count, status_callback=update_status)
+# 2-Departament: Mavzuli chuqur testlar
+@app.route('/api/generate-topic-test', methods=['POST'])
+async def generate_topic_test():
+    data = request.json or {}
+    topic = data.get('topic', 'Biologiya')
+    count = data.get('count', '10')
+    telegram_id = data.get('telegramId')
 
-        await status_msg.edit_text("📑 Hujjatlar shakllantirilmoqda...")
+    draft = ask_gemini(AGENT_PROMPTS["agent3_mavzu_testolog"], f"{topic} mavzusidan {count} ta polimorf test tuzing.")
+    audited = ask_gemini(AGENT_PROMPTS["agent4_metodik_ekspert"], draft)
 
-        os.makedirs("output", exist_ok=True)
-        s_docx = f"output/Oquvchi_{message.chat.id}.docx"
-        t_docx = f"output/Oqituvchi_{message.chat.id}.docx"
-        s_pdf = f"output/Oquvchi_{message.chat.id}.pdf"
-        t_pdf = f"output/Oqituvchi_{message.chat.id}.pdf"
+    if telegram_id:
+        doc_path = create_document(f"Testlar: {topic}", audited, f"Test_{telegram_id}.docx")
+        with open(doc_path, 'rb') as f:
+            await bot.send_document(telegram_id, f, caption=f"✅ '{topic}' bo'yicha {count} ta test va metodik tahlil tayyor!")
+        os.remove(doc_path)
 
-        build_student_docx(tests, s_docx)
-        build_teacher_docx(tests, t_docx)
-        build_pdf_document(tests, s_pdf, is_teacher=False)
-        build_pdf_document(tests, t_pdf, is_teacher=True)
+    return jsonify({"success": True, "result": audited})
 
-        await message.answer_document(FSInputFile(s_docx), caption="📄 O'quvchi to'plami (Word)")
-        await message.answer_document(FSInputFile(s_pdf), caption="📑 O'quvchi to'plami (PDF)")
-        await message.answer_document(FSInputFile(t_docx), caption="📄 O'qituvchi to'plami (Ekspertiza Word)")
-        await message.answer_document(FSInputFile(t_pdf), caption="📑 O'qituvchi to'plami (Ekspertiza PDF)")
+# 3-Departament: Milliy sertifikat (43 talik)
+@app.route('/api/generate-sertifikat', methods=['POST'])
+async def generate_sertifikat():
+    data = request.json or {}
+    variant_name = data.get('variantName', 'Variant-1')
+    telegram_id = data.get('telegramId')
 
-        await status_msg.delete()
+    exam = ask_gemini(AGENT_PROMPTS["agent5_katta_testolog"], f"Milliy sertifikat uchun yangi {variant_name} ni tuzing.")
+    rubrika = ask_gemini(AGENT_PROMPTS["agent6_bosh_auditor"], exam)
 
-async def start_bot():
-    if not bot:
-        print("BOT_TOKEN topilmadi!")
-        return
-    # Eski osilib qolgan barcha ulanish va xabarlarni majburan tozalash (ConflictError yechimi)
-    await bot.delete_webhook(drop_pending_updates=True)
-    print("Bot polling boshlandi...")
-    await dp.start_polling(bot, drop_pending_updates=True)
+    if telegram_id:
+        # O'quvchi varianti
+        doc_exam = create_document(f"Savol Kitobi: {variant_name}", exam, f"Exam_{telegram_id}.docx")
+        with open(doc_exam, 'rb') as f:
+            await bot.send_document(telegram_id, f, caption=f"📋 Milliy sertifikat sinov varianti ({variant_name}).")
+        os.remove(doc_exam)
 
-@app.on_event("startup")
-async def on_startup():
-    asyncio.create_task(start_bot())
+        # O'qituvchi varianti (M/A mezonlari)
+        doc_rubrika = create_document(f"Yechimlar va Rubrika: {variant_name}", rubrika, f"Rubrika_{telegram_id}.docx")
+        with open(doc_rubrika, 'rb') as f:
+            await bot.send_document(telegram_id, f, caption=f"🔑 Maxfiy tekshiruv mezonlari va M/A yechimlar ({variant_name}).")
+        os.remove(doc_rubrika)
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    return jsonify({"success": True})
+
+# 4-Departament: Qo'llanma
+@app.route('/api/generate-guide', methods=['POST'])
+async def generate_guide():
+    data = request.json or {}
+    topic = data.get('topic', 'Biologiya')
+    telegram_id = data.get('telegramId')
+
+    draft = ask_gemini(AGENT_PROMPTS["agent7_qollanma_arxitektori"], topic)
+    final_guide = ask_gemini(AGENT_PROMPTS["agent8_akademik_redaktor"], draft)
+
+    if telegram_id:
+        doc_path = create_document(f"Qo'llanma: {topic}", final_guide, f"Qollanma_{telegram_id}.docx")
+        with open(doc_path, 'rb') as f:
+            await bot.send_document(telegram_id, f, caption=f"📚 '{topic}' bo'yicha 7 bosqichli akademik konspekt tayyor!")
+        os.remove(doc_path)
+
+    return jsonify({"success": True, "result": final_guide})
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)

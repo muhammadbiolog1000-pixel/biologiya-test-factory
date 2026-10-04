@@ -1,6 +1,5 @@
 """
 BIOLOGIYA VEKTOR - ASOSIY SERVER VA BOT INTEGRATSIYASI (main.py)
-FastAPI, Aiogram 3 va Google GenAI
 """
 import os
 import asyncio
@@ -16,7 +15,6 @@ from google import genai
 from agents import AGENT_PROMPTS, CAPACITY_ANALYZER_PROMPT, AGENT_NAMES
 from generator import create_document
 
-# Muhit o'zgaruvchilari (Render Environment Variables)
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
@@ -24,7 +22,6 @@ ai_client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
 bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 dp = Dispatcher()
 
-# Bot /start komandasi
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     await message.answer(
@@ -35,14 +32,15 @@ async def start_handler(message: types.Message):
         parse_mode="HTML"
     )
 
-# Lifespan: Server yoqilganda botni ishga tushirish, o'chganda to'xtatish
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     polling_task = None
     if bot:
-        # Eski osilib qolgan ulanishlarni tozalaymiz
-        await bot.delete_webhook(drop_pending_updates=True)
-        polling_task = asyncio.create_task(dp.start_polling(bot))
+        try:
+            await bot.delete_webhook(drop_pending_updates=True)
+            polling_task = asyncio.create_task(dp.start_polling(bot))
+        except Exception as e:
+            print(f"Bot start error: {e}")
     yield
     if polling_task:
         polling_task.cancel()
@@ -59,12 +57,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Render uchun uyg'oq saqlovchi yengil ping
 @app.get("/ping")
 async def ping():
     return "pong"
 
-# Mini App bosh sahifasi (index.html)
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     if os.path.exists("index.html"):
@@ -72,182 +68,210 @@ async def serve_index():
             return f.read()
     return "<h3>index.html fayli topilmadi.</h3>"
 
-# Gemini neyrotarmog'iga so'rov yuborish
+# Gemini neyrotarmog'iga so'rov (Xatoliklarga chidamli va avtomatik model tanlovchi)
 def ask_gemini(system_prompt: str, user_text: str) -> str:
     if not ai_client:
-        return "Xatolik: GEMINI_API_KEY o'rnatilmagan."
-    response = ai_client.models.generate_content(
-        model="gemini-2.5-pro",
-        contents=f"{system_prompt}\n\nTopshiriq:\n{user_text}"
-    )
-    return response.text
+        return "Xatolik: Serverda GEMINI_API_KEY o'rnatilmagan."
+    
+    # Bepul kvotada eng tez va ishonchli ishlovchi modellar ketma-ketligi
+    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+    last_err = ""
+    
+    for model_name in models_to_try:
+        try:
+            response = ai_client.models.generate_content(
+                model=model_name,
+                contents=f"{system_prompt}\n\nTopshiriq:\n{user_text}"
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            last_err = str(e)
+            continue
+            
+    return f"Gemini API xatoligi: {last_err}"
 
-# -----------------------------------------------------------------------------
-# 0. MAVZU SIG'IMINI TAHLIL QILISH (🧠 Tugmasi uchun)
-# -----------------------------------------------------------------------------
+# 0. MAVZU SIG'IMINI TAHLIL QILISH
 @app.post("/api/analyze-topic")
 async def analyze_topic(request: Request):
-    data = await request.json()
-    topic = data.get("topic", "")
-    if not topic.strip():
-        return JSONResponse({"success": False, "error": "Mavzu kiritilmadi."})
+    try:
+        data = await request.json()
+        topic = data.get("topic", "")
+        if not topic.strip():
+            return JSONResponse({"success": False, "error": "Mavzu kiritilmadi."})
 
-    analysis = ask_gemini(CAPACITY_ANALYZER_PROMPT, f"Mavzu yoki matn:\n{topic}")
-    return JSONResponse({"success": True, "analysis": analysis})
+        analysis = ask_gemini(CAPACITY_ANALYZER_PROMPT, f"Mavzu yoki matn:\n{topic}")
+        return JSONResponse({"success": True, "analysis": analysis})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 1-DEPARTAMENT: BLITS SAVOL-JAVOB
-# -----------------------------------------------------------------------------
+# 1-DEPARTAMENT: BLITS
 @app.post("/api/generate-blits")
 async def generate_blits(request: Request):
-    data = await request.json()
-    topic = data.get("topic", "Biologiya")
-    count = data.get("count", "10")
-    telegram_id = data.get("telegramId")
+    try:
+        data = await request.json()
+        topic = data.get("topic", "Biologiya")
+        count = data.get("count", "10")
+        telegram_id = data.get("telegramId")
 
-    draft = ask_gemini(AGENT_PROMPTS["agent1"], f"{topic} mavzusidan {count} ta blits savol-javob shakllantiring.")
-    audited = ask_gemini(AGENT_PROMPTS["agent2"], draft)
+        draft = ask_gemini(AGENT_PROMPTS["agent1"], f"{topic} mavzusidan {count} ta blits savol-javob shakllantiring.")
+        audited = ask_gemini(AGENT_PROMPTS["agent2"], draft)
 
-    if telegram_id and bot:
-        doc_path = create_document(f"Blits: {topic}", audited, f"Blits_{telegram_id}.docx")
-        if os.path.exists(doc_path):
-            await bot.send_document(
-                chat_id=telegram_id,
-                document=FSInputFile(doc_path),
-                caption=f"⚡️ <b>{topic}</b> bo'yicha blits savol-javoblar tayyor!",
-                parse_mode="HTML"
-            )
-            os.remove(doc_path)
+        if telegram_id and bot:
+            try:
+                doc_path = create_document(f"Blits: {topic}", audited, f"Blits_{telegram_id}.docx")
+                if os.path.exists(doc_path):
+                    await bot.send_document(
+                        chat_id=telegram_id,
+                        document=FSInputFile(doc_path),
+                        caption=f"⚡️ <b>{topic}</b> bo'yicha blits savol-javoblar tayyor!",
+                        parse_mode="HTML"
+                    )
+                    os.remove(doc_path)
+            except Exception as file_err:
+                print(f"Fayl yuborishda xato: {file_err}")
 
-    return JSONResponse({"success": True, "result": audited})
+        return JSONResponse({"success": True, "result": audited})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 2-DEPARTAMENT: MAVZULASHTIRILGAN CHUQUR TESTLAR
-# -----------------------------------------------------------------------------
+# 2-DEPARTAMENT: MAVZULI CHUQUR TESTLAR
 @app.post("/api/generate-topic-test")
 async def generate_topic_test(request: Request):
-    data = await request.json()
-    topic = data.get("topic", "Biologiya")
-    count = data.get("count", "10")
-    telegram_id = data.get("telegramId")
+    try:
+        data = await request.json()
+        topic = data.get("topic", "Biologiya")
+        count = data.get("count", "10")
+        telegram_id = data.get("telegramId")
 
-    draft = ask_gemini(AGENT_PROMPTS["agent3"], f"{topic} mavzusidan {count} ta chuqurlashtirilgan polimorf test tuzing.")
-    audited = ask_gemini(AGENT_PROMPTS["agent4"], draft)
+        draft = ask_gemini(AGENT_PROMPTS["agent3"], f"{topic} mavzusidan {count} ta chuqurlashtirilgan polimorf test tuzing.")
+        audited = ask_gemini(AGENT_PROMPTS["agent4"], draft)
 
-    if telegram_id and bot:
-        doc_path = create_document(f"Mavzuli Testlar: {topic}", audited, f"Test_{telegram_id}.docx")
-        if os.path.exists(doc_path):
-            await bot.send_document(
-                chat_id=telegram_id,
-                document=FSInputFile(doc_path),
-                caption=f"📝 <b>{topic}</b> bo'yicha {count} ta test va metodik tahlil tayyor!",
-                parse_mode="HTML"
-            )
-            os.remove(doc_path)
+        if telegram_id and bot:
+            try:
+                doc_path = create_document(f"Mavzuli Testlar: {topic}", audited, f"Test_{telegram_id}.docx")
+                if os.path.exists(doc_path):
+                    await bot.send_document(
+                        chat_id=telegram_id,
+                        document=FSInputFile(doc_path),
+                        caption=f"📝 <b>{topic}</b> bo'yicha {count} ta test va metodik tahlil tayyor!",
+                        parse_mode="HTML"
+                    )
+                    os.remove(doc_path)
+            except Exception as file_err:
+                print(f"Fayl yuborishda xato: {file_err}")
 
-    return JSONResponse({"success": True, "result": audited})
+        return JSONResponse({"success": True, "result": audited})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 3-DEPARTAMENT: MILLIY SERTIFIKAT (43 TALIK TO'LIQ BLOK)
-# -----------------------------------------------------------------------------
+# 3-DEPARTAMENT: MILLIY SERTIFIKAT
 @app.post("/api/generate-sertifikat")
 async def generate_sertifikat(request: Request):
-    data = await request.json()
-    variant_name = data.get("variantName", "BMBA Milliy Sertifikat")
-    telegram_id = data.get("telegramId")
+    try:
+        data = await request.json()
+        variant_name = data.get("variantName", "BMBA Milliy Sertifikat")
+        telegram_id = data.get("telegramId")
 
-    # 5-Agent to'liq 43 talik variant tuzadi (mavzu so'ralmaydi, butun biologiya qamrab olinadi)
-    exam = ask_gemini(
-        AGENT_PROMPTS["agent5"],
-        f"Butun biologiya kursi (Botanika, Zoologiya, Anatomiya, Sitologiya, Genetika) bo'yicha yangi rasmiy {variant_name} ni to'liq (1-43) shakllantiring."
-    )
-    # 6-Agent tekshiradi va M/A yechimlar rubrikasini tuzadi
-    rubrika = ask_gemini(AGENT_PROMPTS["agent6"], exam)
+        exam = ask_gemini(
+            AGENT_PROMPTS["agent5"],
+            f"Butun biologiya kursi (Botanika, Zoologiya, Anatomiya, Sitologiya, Genetika) bo'yicha yangi rasmiy {variant_name} ni to'liq (1-43) shakllantiring."
+        )
+        rubrika = ask_gemini(AGENT_PROMPTS["agent6"], exam)
 
-    if telegram_id and bot:
-        # O'quvchi varianti
-        doc_exam = create_document(f"Savol Kitobi: {variant_name}", exam, f"Exam_{telegram_id}.docx")
-        if os.path.exists(doc_exam):
-            await bot.send_document(
-                chat_id=telegram_id,
-                document=FSInputFile(doc_exam),
-                caption=f"📋 <b>{variant_name}</b> — Sinov varianti (O'quvchi uchun).",
-                parse_mode="HTML"
-            )
-            os.remove(doc_exam)
+        if telegram_id and bot:
+            try:
+                doc_exam = create_document(f"Savol Kitobi: {variant_name}", exam, f"Exam_{telegram_id}.docx")
+                if os.path.exists(doc_exam):
+                    await bot.send_document(
+                        chat_id=telegram_id,
+                        document=FSInputFile(doc_exam),
+                        caption=f"📋 <b>{variant_name}</b> — Sinov varianti (O'quvchi uchun).",
+                        parse_mode="HTML"
+                    )
+                    os.remove(doc_exam)
 
-        # O'qituvchi varianti (M/A mezonlari va qadamma-qadam yechimlar)
-        doc_rubrika = create_document(f"Maxfiy Rubrika: {variant_name}", rubrika, f"Rubrika_{telegram_id}.docx")
-        if os.path.exists(doc_rubrika):
-            await bot.send_document(
-                chat_id=telegram_id,
-                document=FSInputFile(doc_rubrika),
-                caption=f"🔑 <b>{variant_name}</b> — Ekspert rubrikasi va M/A baholash mezonlari (O'qituvchi uchun).",
-                parse_mode="HTML"
-            )
-            os.remove(doc_rubrika)
+                doc_rubrika = create_document(f"Maxfiy Rubrika: {variant_name}", rubrika, f"Rubrika_{telegram_id}.docx")
+                if os.path.exists(doc_rubrika):
+                    await bot.send_document(
+                        chat_id=telegram_id,
+                        document=FSInputFile(doc_rubrika),
+                        caption=f"🔑 <b>{variant_name}</b> — Ekspert rubrikasi va M/A baholash mezonlari (O'qituvchi uchun).",
+                        parse_mode="HTML"
+                    )
+                    os.remove(doc_rubrika)
+            except Exception as file_err:
+                print(f"Fayl yuborishda xato: {file_err}")
 
-    return JSONResponse({"success": True, "exam": exam, "rubrika": rubrika})
+        return JSONResponse({"success": True, "exam": exam, "rubrika": rubrika})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 4-DEPARTAMENT: 7 BOSQICHLI QO'LLANMA VA KONSPEKT
-# -----------------------------------------------------------------------------
+# 4-DEPARTAMENT: QO'LLANMA
 @app.post("/api/generate-guide")
 async def generate_guide(request: Request):
-    data = await request.json()
-    topic = data.get("topic", "Biologiya")
-    telegram_id = data.get("telegramId")
+    try:
+        data = await request.json()
+        topic = data.get("topic", "Biologiya")
+        telegram_id = data.get("telegramId")
 
-    draft = ask_gemini(AGENT_PROMPTS["agent7"], f"{topic} mavzusini 7 bosqichli universal formula asosida to'liq yoriting.")
-    final_guide = ask_gemini(AGENT_PROMPTS["agent8"], draft)
+        draft = ask_gemini(AGENT_PROMPTS["agent7"], f"{topic} mavzusini 7 bosqichli universal formula asosida to'liq yoriting.")
+        final_guide = ask_gemini(AGENT_PROMPTS["agent8"], draft)
 
-    if telegram_id and bot:
-        doc_path = create_document(f"Qo'llanma: {topic}", final_guide, f"Qollanma_{telegram_id}.docx")
-        if os.path.exists(doc_path):
-            await bot.send_document(
-                chat_id=telegram_id,
-                document=FSInputFile(doc_path),
-                caption=f"📚 <b>{topic}</b> bo'yicha 7 bosqichli akademik konspekt tayyor!",
-                parse_mode="HTML"
-            )
-            os.remove(doc_path)
+        if telegram_id and bot:
+            try:
+                doc_path = create_document(f"Qo'llanma: {topic}", final_guide, f"Qollanma_{telegram_id}.docx")
+                if os.path.exists(doc_path):
+                    await bot.send_document(
+                        chat_id=telegram_id,
+                        document=FSInputFile(doc_path),
+                        caption=f"📚 <b>{topic}</b> bo'yicha 7 bosqichli akademik konspekt tayyor!",
+                        parse_mode="HTML"
+                    )
+                    os.remove(doc_path)
+            except Exception as file_err:
+                print(f"Fayl yuborishda xato: {file_err}")
 
-    return JSONResponse({"success": True, "result": final_guide})
+        return JSONResponse({"success": True, "result": final_guide})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 5. AGENTLAR BILAN INDIVIDUAL CHAT MARKAZI
-# -----------------------------------------------------------------------------
+# 5. AGENT BILAN CHAT MARKAZI
 @app.post("/api/chat-agent")
 async def chat_agent(request: Request):
-    data = await request.json()
-    agent_key = data.get("agentKey", "agent1")
-    user_message = data.get("message", "")
+    try:
+        data = await request.json()
+        agent_key = data.get("agentKey", "agent1")
+        user_message = data.get("message", "")
 
-    system_prompt = AGENT_PROMPTS.get(agent_key, AGENT_PROMPTS["agent1"])
-    agent_name = AGENT_NAMES.get(agent_key, "Agent")
+        system_prompt = AGENT_PROMPTS.get(agent_key, AGENT_PROMPTS["agent1"])
+        agent_name = AGENT_NAMES.get(agent_key, "Agent")
 
-    reply = ask_gemini(
-        f"{system_prompt}\nSiz hozir o'qituvchi/foydalanuvchi bilan bevosita professional chat qilyapsiz. O'z mutaxassisligingizdan kelib chiqib, aniq va ilmiy javob bering.",
-        user_message
-    )
-    return JSONResponse({"success": True, "agent": agent_name, "reply": reply})
+        reply = ask_gemini(
+            f"{system_prompt}\n\nSiz hozir o'qituvchi/foydalanuvchi bilan bevosita professional chat qilyapsiz. O'z mutaxassisligingizdan kelib chiqib, o'zbek tilida aniq va ilmiy javob bering.",
+            user_message
+        )
+        return JSONResponse({"success": True, "agent": agent_name, "reply": reply})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
-# -----------------------------------------------------------------------------
-# 6. AGENTLAR SHTABI: PROMPTLARNI KO'RISH VA YANGILASH
-# -----------------------------------------------------------------------------
+# 6. PROMPTLAR SHTABI
 @app.get("/api/prompts")
 async def get_prompts():
     return JSONResponse(AGENT_PROMPTS)
 
 @app.post("/api/prompts")
 async def update_prompt(request: Request):
-    data = await request.json()
-    key = data.get("key")
-    prompt = data.get("prompt")
-    if key in AGENT_PROMPTS and prompt:
-        AGENT_PROMPTS[key] = prompt
-        return JSONResponse({"success": True, "message": f"{key} prompti muvaffaqiyatli yangilandi!"})
-    return JSONResponse({"success": False, "error": "Bunday agent mavjud emas yoki matn bo'sh."}, status_code=400)
+    try:
+        data = await request.json()
+        key = data.get("key")
+        prompt = data.get("prompt")
+        if key in AGENT_PROMPTS and prompt:
+            AGENT_PROMPTS[key] = prompt
+            return JSONResponse({"success": True, "message": f"{key} prompti muvaffaqiyatli yangilandi!"})
+        return JSONResponse({"success": False, "error": "Bunday agent mavjud emas yoki matn bo'sh."})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
 
 if __name__ == "__main__":
     import uvicorn
